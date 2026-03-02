@@ -1,265 +1,287 @@
+import os
+from dotenv import load_dotenv
 import telebot
 from telebot import types
-from config import BOT_TOKEN, ADMIN_ID, SALON_NAME
-from database import init_db, add_booking, get_user_bookings, cancel_booking, is_slot_free
-from keyboards import main_menu, masters_keyboard, duration_keyboard, date_keyboard, time_keyboard
-from utils import is_greeting
-from datetime import datetime
-import time
-import sqlite3
-bot = telebot.TeleBot(BOT_TOKEN)
 
-user_state = {}
-user_data = {}
+load_dotenv()
+TOKEN = os.getenv('BOT_TOKEN')
 
-# ─── СПЕЦИАЛЬНЫЕ ХЕНДЛЕРЫ (имя → телефон) ────────────────────────────────────────
-@bot.message_handler(func=lambda m: user_state.get(m.chat.id) == "entering_name")
-def get_name(message):
-    chat_id = message.chat.id
-    user_data[chat_id]["name"] = message.text.strip()
-    user_state[chat_id] = "entering_phone"
-    bot.send_message(chat_id, "Введите ваш номер телефона (например +7 999 123-45-67):")
+if not TOKEN:
+    print("❌ Добавь BOT_TOKEN в .env файл!")
+    exit()
 
+bot = telebot.TeleBot(TOKEN, parse_mode='HTML')
 
-@bot.message_handler(func=lambda m: user_state.get(m.chat.id) == "entering_phone")
-def get_phone(message):
-    chat_id = message.chat.id
-    data = user_data[chat_id]
-    phone = message.text.strip()
+# ====================== КЛАВИАТУРЫ ======================
+def main_keyboard():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    btn1 = types.KeyboardButton('👋 О нас')
+    btn2 = types.KeyboardButton('💅 Услуги')
+    btn3 = types.KeyboardButton('👩‍🎨 Наши мастера')
+    btn4 = types.KeyboardButton('📅 Записаться')
+    btn5 = types.KeyboardButton('📞 Контакты')
+    btn6 = types.KeyboardButton('❓ Помощь')
+    markup.add(btn1, btn2)
+    markup.add(btn3, btn4)
+    markup.add(btn5, btn6)
+    return markup
 
-    add_booking(
-        chat_id, data["master"], data["date"], data["time"],
-        data["duration"], data["name"], phone
+def services_categories():
+    markup = types.InlineKeyboardMarkup(row_width=1)
+    markup.add(
+        types.InlineKeyboardButton('💅 Маникюр и педикюр', callback_data='cat_nails'),
+        types.InlineKeyboardButton('🌟 Брови и ресницы', callback_data='cat_brows'),
+        types.InlineKeyboardButton('💇‍♀️ Волосы', callback_data='cat_hair'),
+        types.InlineKeyboardButton('💄 Макияж', callback_data='cat_makeup')
     )
-
-    admin_text = (
-        "💅 НОВАЯ ЗАПИСЬ\n\n"
-        f"Мастер: {data['master']}\n"
-        f"Дата и время: {data['date']} {data['time']}\n"
-        f"Длительность: {data['duration']} мин\n"
-        f"Имя: {data['name']}\n"
-        f"Телефон: {phone}\n"
-        f"Клиент: @{message.from_user.username or 'нет'}"
+    markup.row(
+        types.InlineKeyboardButton('« Назад в меню', callback_data='back_to_main')
     )
+    return markup
 
-    try:
-        bot.send_message(ADMIN_ID, admin_text)
-        print(f"Уведомление админу отправлено")
-    except Exception as e:
-        print(f"Ошибка уведомления админу: {e}")
-
-    bot.send_message(
-        chat_id,
-        f"✅ Запись подтверждена!\n\n"
-        f"🗓 {data['date']} в {data['time']}\n"
-        f"👩‍🎨 {data['master']}\n"
-        f"⏱ {data['duration']} мин\n\n"
-        f"Ждём вас! 💅",
-        reply_markup=main_menu()
+def back_to_services_markup():
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        types.InlineKeyboardButton('📅 Записаться', url='https://n757778.yclients.com/company/712716/personal/menu?o='),
+        types.InlineKeyboardButton('« Назад к категориям', callback_data='back_to_categories')
     )
+    return markup
 
-    user_state.pop(chat_id, None)
-    user_data.pop(chat_id, None)
+# ====================== СПИСОК МАСТЕРОВ ======================
+MASTERS = [
+    {
+        "name": "Айсулуу",
+        "spec": "Топ мастер маникюра и педикюра",
+        "rating": "★★★★★ 1131 отзыв",
+        "info": "Один из самых опытных и популярных мастеров студии. Высокий рейтинг и тысячи довольных гостей."
+    },
+    {
+        "name": "Чынара",
+        "spec": "Топ мастер маникюра и педикюра",
+        "rating": "★★★★★ 1146 отзывов",
+        "info": "Профессионал с огромным количеством положительных отзывов. Работает быстро и качественно."
+    },
+    {
+        "name": "Айжан",
+        "spec": "Топ мастер маникюра и педикюра",
+        "rating": "★★★★★ 502 отзыва",
+        "info": "Любимый мастер многих гостей за аккуратность и внимание к деталям."
+    },
+    {
+        "name": "Айгуль",
+        "spec": "Топ мастер маникюра и педикюра",
+        "rating": "★★★★★ 1708 отзывов",
+        "info": "Рекордсмен по отзывам — очень опытный специалист с безупречной репутацией."
+    },
+    {
+        "name": "Диля",
+        "spec": "Мастер маникюра и педикюра. Парикмахер",
+        "rating": "★★★★★ 55 отзывов",
+        "info": "Универсальный мастер — делает и маникюр/педикюр, и стрижки. Аккуратная и внимательная."
+    },
+    {
+        "name": "Эля",
+        "spec": "Мастер маникюра и педикюра",
+        "rating": "★★★★★ 27 отзывов",
+        "info": "Молодой, но уже любимый многими мастер. Делает красиво и с душой."
+    },
+    {
+        "name": "Нестан",
+        "spec": "Мастер маникюра и педикюра",
+        "rating": "★★★★★ 2 отзыва",
+        "info": "Начинающий специалист с хорошим потенциалом. Аккуратная работа."
+    },
+    {
+        "name": "Мэри",
+        "spec": "Мастер маникюра и педикюра",
+        "rating": "★★★★★ 2 отзыва",
+        "info": "Внимательный подход к каждому клиенту. Хорошее качество по доступной цене."
+    },
+    {
+        "name": "Бермет",
+        "spec": "Мастер маникюра и педикюра",
+        "rating": "",
+        "info": "Специалист по ногтевому сервису. Доброжелательная и аккуратная."
+    },
+]
 
+def masters_list_markup():
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    for master in MASTERS:
+        markup.add(types.InlineKeyboardButton(master["name"], callback_data=f'master_{master["name"]}'))
+    markup.row(
+        types.InlineKeyboardButton('« Назад в меню', callback_data='back_to_main')
+    )
+    return markup
 
-# ─── КОМАНДЫ ДЛЯ ТЕСТА И СБРОСА ─────────────────────────────────────────────────
-@bot.message_handler(commands=['test_admin'])
-def test_admin(message):
-    try:
-        bot.send_message(ADMIN_ID, "🧪 ТЕСТ УВЕДОМЛЕНИЯ\nЕсли видишь — всё работает!")
-        bot.send_message(message.chat.id, "Тест отправлен в группу/личку")
-    except Exception as e:
-        bot.send_message(message.chat.id, f"Ошибка теста: {str(e)}")
-
-
-@bot.message_handler(commands=['cancel'])
-def cancel_state(message):
-    chat_id = message.chat.id
-    user_state.pop(chat_id, None)
-    user_data.pop(chat_id, None)
-    bot.send_message(chat_id, "Состояние сброшено. Нажми /start", reply_markup=main_menu())
-
-
-# ─── ОБЩИЙ ОБРАБОТЧИК СООБЩЕНИЙ ──────────────────────────────────────────────────
-@bot.message_handler(func=lambda m: True)
-def handle_all(message):
-    chat_id = message.chat.id
-    if not message.text:
-        return
-
-    text = message.text.strip()
-    text_lower = text.lower()
-
-    print(f"[DEBUG] Получено сообщение: '{text}' (от {chat_id})")  # ← для отладки
-
-    if user_state.get(chat_id):
-        return
-
-    if is_greeting(text):
-        bot.send_message(chat_id,
-                         "Привет! Хотите записаться? Нажмите кнопку ниже 👇",
-                         reply_markup=main_menu())
-        return
-
-    # Записаться на маникюр
-    if "записаться" in text_lower or "маникюр" in text_lower:
-        user_state[chat_id] = "choosing_master"
-        bot.send_message(chat_id, "Выберите мастера:", reply_markup=masters_keyboard())
-        return
-
-    # Мои записи
-    if "мои записи" in text_lower or "записи" in text_lower:
-        bookings = get_user_bookings(chat_id)
-        if not bookings:
-            bot.send_message(chat_id, "У вас нет активных записей 😊")
-            return
-
-        text_reply = "📋 Ваши записи:\n\n"
-        markup = types.InlineKeyboardMarkup(row_width=1)
-        has_active = False
-
-        for b in bookings:
-            booking_id, master, date, time_str, duration = b
-            try:
-                booking_dt = datetime.strptime(f"{date} {time_str}", "%Y-%m-%d %H:%M")
-                if booking_dt <= datetime.now():
-                    text_reply += f"🗓 {date} {time_str} — {master} ({duration} мин) [прошла]\n"
-                    continue
-            except:
-                pass
-
-            text_reply += f"🗓 {date} {time_str} — {master} ({duration} мин)\n"
-            markup.add(types.InlineKeyboardButton(
-                f"❌ Отменить {date} {time_str}",
-                callback_data=f"cancel_confirm_{booking_id}"
-            ))
-            has_active = True
-
-        if not has_active:
-            text_reply += "\nВсе записи уже прошли или отменены."
-
-        bot.send_message(chat_id, text_reply, reply_markup=markup)
-        return
-
-    # Помощь
-    if "помощь" in text_lower or "?" in text or "помоги" in text_lower:
-        bot.send_message(chat_id, "По всем вопросам пишите @ваш_логин\nИли просто нажмите «Записаться на маникюр» 💅")
-        return
-
-    # Если ничего не подошло
-    bot.send_message(chat_id, "Не понял команду 😅\nПопробуйте кнопки ниже:", reply_markup=main_menu())
-
-
-# ─── CALLBACKS ───────────────────────────────────────────────────────────────────
-@bot.callback_query_handler(func=lambda call: True)
-def callback_handler(call):
-    user_id = call.message.chat.id
-
-    if call.data.startswith("master_"):
-        master = call.data.split("_", 1)[1]
-        user_data[user_id] = {"master": master}
-        user_state[user_id] = "choosing_duration"
-        bot.edit_message_text("Выберите длительность:", user_id, call.message.message_id,
-                              reply_markup=duration_keyboard())
-
-    elif call.data.startswith("dur_"):
-        duration = int(call.data.split("_")[1])
-        user_data[user_id]["duration"] = duration
-        user_state[user_id] = "choosing_date"
-        bot.edit_message_text("Выберите дату:", user_id, call.message.message_id,
-                              reply_markup=date_keyboard())
-
-    elif call.data.startswith("date_"):
-        date = call.data.split("_")[1]
-        user_data[user_id]["date"] = date
-        user_state[user_id] = "choosing_time"
-        master = user_data[user_id]["master"]
-        duration = user_data[user_id]["duration"]
-        bot.edit_message_text(
-            f"Свободные слоты на {date} для {master} ({duration} мин):",
-            user_id,
-            call.message.message_id,
-            reply_markup=time_keyboard(date, master, duration)
-        )
-
-    elif call.data.startswith("time_"):
-        time_slot = call.data.split("_")[1]
-        user_data[user_id]["time"] = time_slot
-        user_state[user_id] = "entering_name"
-        bot.edit_message_text("Введите ваше имя:", user_id, call.message.message_id)
-
-    elif call.data.startswith("cancel_confirm_"):
-        booking_id = int(call.data.split("_")[2])
-
-        conn = sqlite3.connect('bookings.db')
-        c = conn.cursor()
-        c.execute("SELECT user_id, master, date, time, duration, name, phone FROM bookings WHERE id=?", (booking_id,))
-        row = c.fetchone()
-        conn.close()
-
-        if row:
-            user_id_db, master, date, time_str, duration, name, phone = row
-            cancel_text = (
-                "❌ ОТМЕНА ЗАПИСИ\n\n"
-                f"Мастер: {master}\n"
-                f"Дата и время: {date} {time_str}\n"
-                f"Длительность: {duration} мин\n"
-                f"Имя: {name}\n"
-                f"Телефон: {phone}\n"
-                f"Клиент: @{call.from_user.username or 'нет'} (ID: {user_id_db})"
-            )
-            try:
-                bot.send_message(ADMIN_ID, cancel_text)
-                print(f"Уведомление об отмене отправлено")
-            except Exception as e:
-                print(f"Ошибка уведомления об отмене: {e}")
-
-        cancel_booking(booking_id)
-        bot.answer_callback_query(call.id, "Запись отменена ✅")
-
-        bot.edit_message_text(
-            "✅ Запись успешно отменена!\nМожете записаться заново.",
-            call.message.chat.id,
-            call.message.message_id,
-            reply_markup=main_menu()
-        )
-
-
-# ─── START ───────────────────────────────────────────────────────────────────────
+# ====================== ОБРАБОТЧИКИ ======================
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.send_message(
-        message.chat.id,
-        f"👋 Добро пожаловать в **{SALON_NAME}**!\n\n"
-        "💅 Запишитесь на маникюр за 30 секунд\n"
-        "Работаем ежедневно 10:00 — 22:00",
-        parse_mode="Markdown",
-        reply_markup=main_menu()
+    welcome = (
+        "👋 <b>Добро пожаловать в Бьютилаб!</b>\n\n"
+        "📍 Москва, ул. Щепкина 28, м. Проспект Мира\n"
+        "📞 <a href='tel:+79774498581'>+7 (977) 449-85-81</a>\n"
+        "🕒 Ежедневно 10:00–22:00\n\n"
+        "💅 Запишитесь на услугу за 30 секунд — без очередей и лотереи с мастером ✨"
     )
+    bot.send_message(message.chat.id, welcome, reply_markup=main_keyboard())
 
+@bot.message_handler(func=lambda m: m.text and m.text.lower() in [
+    'привет', 'здравствуй', 'добрый день', 'доброе утро', 'добрый вечер',
+    'хай', 'hello', 'hi', 'здрасьте'
+])
+def hello(message):
+    start(message)
 
-# ─── ЗАПУСК С ДИАГНОСТИКОЙ ───────────────────────────────────────────────────────
-if __name__ == "__main__":
-    init_db()
-    print("🤖 Бот запущен")
-    print(f"Админ (группа): {ADMIN_ID}")
-    print(f"Токен (первые 10 символов): {BOT_TOKEN[:10]}...")
+@bot.message_handler(content_types=['text'])
+def handle_text(message):
+    text = message.text
 
-    while True:
+    if text == '👋 О нас':
+        about = (
+            "✨ <b>Бьютилаб</b> — студия красоты у метро Проспект Мира.\n\n"
+            "Мы создаём пространство, где каждая девушка чувствует заботу, комфорт и результат.\n"
+            "Стерильность, современные материалы, опытные мастера и никакого стресса."
+        )
+        bot.send_message(message.chat.id, about, reply_markup=main_keyboard())
+
+    elif text == '💅 Услуги':
+        bot.send_message(message.chat.id, 
+                        "🛍️ <b>Выберите категорию услуг:</b>", 
+                        reply_markup=services_categories())
+
+    elif text == '👩‍🎨 Наши мастера':
+        text_msg = "👩‍🎨 <b>Наши мастера</b>\n\nВыберите мастера, чтобы узнать подробнее:"
+        bot.send_message(message.chat.id, text_msg, reply_markup=masters_list_markup())
+
+    elif text == '📅 Записаться':
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton(
+            '🚀 Записаться онлайн', 
+            url='https://n757778.yclients.com/company/712716/personal/menu?o='
+        ))
+        bot.send_message(
+            message.chat.id,
+            "💫 Переходи в онлайн-запись — выбери мастера, услугу и удобное время за 30 секунд!",
+            reply_markup=markup
+        )
+
+    elif text == '📞 Контакты':
+        contacts = (
+            "📍 <b>Бьютилаб</b>\n"
+            "ул. Щепкина 28, Москва\n"
+            "м. Проспект Мира\n\n"
+            "📞 <a href='tel:+79774498581'>+7 (977) 449-85-81</a>\n"
+            "🕒 Ежедневно 10:00–22:00\n\n"
+            "Напиши нам в любой момент — ответим максимально быстро ❤️"
+        )
+        bot.send_message(message.chat.id, contacts, reply_markup=main_keyboard())
+
+    elif text == '❓ Помощь':
+        help_text = (
+            "❓ <b>Нужна помощь?</b>\n\n"
+            "Если бот глючит, не открывается запись, не приходят сообщения или есть любые вопросы/пожелания — "
+            "пиши напрямую администратору:\n\n"
+            "👉 @NONE скоро будет\n\n"
+            "Мы ответим максимально быстро ❤️\n"
+            "Также можешь позвонить: +7 (888) 888-88-88"
+        )
+        bot.send_message(message.chat.id, help_text, reply_markup=main_keyboard())
+
+# ====================== CALLBACK ======================
+@bot.callback_query_handler(func=lambda call: True)
+def callback_handler(call):
+    if call.data == 'back_to_main':
         try:
-            print("→ Запуск polling... (ожидаю сообщений)")
-            bot.infinity_polling(
-                none_stop=True,
-                interval=0,
-                timeout=10,
-                long_polling_timeout=15,
-                skip_pending=False,
-                allowed_updates=["message", "callback_query", "edited_message"]
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+        except:
+            pass
+        bot.send_message(call.message.chat.id, "Главное меню:", reply_markup=main_keyboard())
+
+    elif call.data == 'back_to_categories':
+        bot.edit_message_text(
+            "🛍️ <b>Выберите категорию услуг:</b>",
+            call.message.chat.id,
+            call.message.message_id,
+            reply_markup=services_categories()
+        )
+
+    elif call.data == 'back_to_masters':
+        bot.edit_message_text(
+            "👩‍🎨 <b>Наши мастера</b>\n\nВыберите мастера, чтобы узнать подробнее:",
+            call.message.chat.id,
+            call.message.message_id,
+            reply_markup=masters_list_markup()
+        )
+
+    elif call.data.startswith('cat_'):
+        category = call.data
+        if category == 'cat_nails':
+            text = (
+                "<b>💅 Маникюр и педикюр</b>\n\n"
+                "• Комплексный маникюр — 3100 ₽\n"
+                "• Маникюр без покрытия — 1700 ₽\n"
+                "• Наращивание ногтей — от 3990 ₽\n"
+                "• Педикюр с покрытием Luxio — от 2550 ₽\n"
+                "• Smart педикюр — 2300 ₽\n"
+                "• Мужской/детский маникюр — от 800 ₽\n\n"
+                "Все цены актуальны на март 2026. Точная стоимость зависит от выбранного покрытия."
             )
-            print("Polling завершился без исключения (странно)")
-        except Exception as e:
-            print(f"!!! ОШИБКА POLLING: {type(e).__name__} — {str(e)}")
-            print("Перезапуск через 5 сек...")
+        elif category == 'cat_brows':
+            text = (
+                "<b>🌟 Брови и ресницы</b>\n\n"
+                "• Архитектура бровей — 1990 ₽\n"
+                "• Окрашивание бровей — 1300 ₽\n"
+                "• Ламинирование бровей — 3000 ₽\n"
+                "• Наращивание ресниц 1D — 2490 ₽\n"
+                "• Наращивание ресниц 2D–4D — от 3790 ₽"
+            )
+        elif category == 'cat_hair':
+            text = (
+                "<b>💇‍♀️ Волосы</b>\n\n"
+                "• Стрижка + укладка — 2490 ₽\n"
+                "• Комплексный уход — 3490 ₽\n"
+                "• Прикорневое окрашивание — от 4490 ₽\n"
+                "• Сложное окрашивание Airtouch — 29900 ₽"
+            )
+        elif category == 'cat_makeup':
+            text = (
+                "<b>💄 Макияж</b>\n\n"
+                "• Дневной макияж — 3500 ₽\n"
+                "• Вечерний макияж — 5000 ₽"
+            )
 
-            time.sleep(5)
+        bot.edit_message_text(
+            text,
+            call.message.chat.id,
+            call.message.message_id,
+            reply_markup=back_to_services_markup()
+        )
 
+    elif call.data.startswith('master_'):
+        name = call.data.split('_', 1)[1]
+        master = next((m for m in MASTERS if m["name"] == name), None)
+        if master:
+            text = (
+                f"<b>{master['name']}</b>\n\n"
+                f"{master['spec']}\n"
+                f"{master['rating']}\n\n"
+                f"{master['info']}\n\n"
+                "Хотите записаться именно к этому мастеру?"
+            )
+            markup = types.InlineKeyboardMarkup(row_width=2)
+            markup.add(
+                types.InlineKeyboardButton('📅 Записаться', url='https://n757778.yclients.com/company/712716/personal/menu?o='),
+                types.InlineKeyboardButton('« Назад к мастерам', callback_data='back_to_masters')
+            )
+            bot.edit_message_text(
+                text,
+                call.message.chat.id,
+                call.message.message_id,
+                reply_markup=markup
+            )
+
+# ====================== ЗАПУСК ======================
+if __name__ == '__main__':
+    print("🚀 Бот Бьютилаб запущен...")
+    bot.infinity_polling()
