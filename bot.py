@@ -117,7 +117,7 @@ def masters_list_markup():
 @bot.message_handler(commands=['start'])
 def start(message):
     welcome = (
-        "👋 <b>Добро пожаловать в Бьютилаб!</b>\n\n"
+        "👋 <b>Добро пожаловать в студию красоты Бьютилаб!</b>\n\n"
         "📍 Москва, ул. Щепкина 28, м. Проспект Мира\n"
         "📞 <a href='tel:+79774498581'>+7 (977) 449-85-81</a>\n"
         "🕒 Ежедневно 10:00–22:00\n\n"
@@ -276,3 +276,4 @@ def callback_handler(call):
 if __name__ == '__main__':
     print("🚀 Бот Бьютилаб запущен...")
     bot.infinity_polling()
+
