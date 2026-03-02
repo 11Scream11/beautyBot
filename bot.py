@@ -7,7 +7,7 @@ from utils import is_greeting
 from datetime import datetime
 import time
 import sqlite3
-
+x = 'hello world'
 bot = telebot.TeleBot(BOT_TOKEN)
 
 user_state = {}
@@ -261,4 +261,5 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"!!! ОШИБКА POLLING: {type(e).__name__} — {str(e)}")
             print("Перезапуск через 5 сек...")
+
             time.sleep(5)
