@@ -1,36 +1,3 @@
-Skip to content
-11Scream11
-beautyBot
-Repository navigation
-Code
-Issues
-Pull requests
-Actions
-Projects
-Wiki
-Security and quality
-Insights
-Settings
-Files
-Go to file
-t
-bot.py
-beautyBot
-/bot.py
-11Scream11
-11Scream11
-Update bot.py
-4494e24
- · 
-7 minutes ago
-beautyBot
-/bot.py
-
-Code
-
-Blame
-309 lines (270 loc) · 18.7 KB
-def ban_user(message):
 import os
 import json
 import time
@@ -47,6 +14,8 @@ if not TOKEN:
     exit()
 
 bot = telebot.TeleBot(TOKEN, parse_mode='HTML')
+
+ADMIN_ID = 6177817315  # ←←← ТВОЙ ID
 
 # ====================== ХРАНИЛИЩЕ ======================
 USERS_FILE = "users.json"
@@ -72,12 +41,12 @@ def save_banned():
     with open(BANNED_FILE, "w", encoding="utf-8") as f:
         json.dump(list(banned_users), f)
 
-# ====================== ПРОДВИНУТАЯ АНТИСПАМ ======================
+# ====================== ПРОДВИНУТАЯ АНТИСПАМ (обновлено по твоей просьбе) ======================
 SPAM_SETTINGS = {
     'max_messages_60s': 12,
     'flood_threshold': 7,
     'flood_window': 10,
-    'temp_ban_time': 300,
+    'temp_ban_time': 900,        # ← 15 минут (как ты просил)
 }
 
 user_messages = {}
@@ -91,6 +60,8 @@ def is_banned(chat_id):
     return False
 
 def check_spam(chat_id):
+    if chat_id == ADMIN_ID:          # Админ имеет полный иммунитет
+        return False
     if is_banned(chat_id):
         return True
 
@@ -104,15 +75,32 @@ def check_spam(chat_id):
 
     user_messages[chat_id].append(now)
 
+    ban_message = (
+        "🚫 <b>Временный бан за спам!</b>\n\n"
+        "Здравствуйте! Вы отправили слишком много сообщений подряд.\n"
+        "Бот заблокировал вас на <b>15 минут</b> для защиты от спама.\n\n"
+        "Через 15 минут можете писать снова. Спасибо за понимание ❤️"
+    )
+
+    # Rate-limit
     if len(user_messages[chat_id]) > SPAM_SETTINGS['max_messages_60s']:
         temp_bans[chat_id] = now + SPAM_SETTINGS['temp_ban_time']
-        print(f"🚫 RATE-LIMIT: Пользователь {chat_id} получил временный бан")
+        print(f"🚫 RATE-LIMIT: Пользователь {chat_id} получил бан на 15 минут")
+        try:
+            bot.send_message(chat_id, ban_message)
+        except:
+            pass
         return True
 
+    # Flood
     recent = [t for t in user_messages[chat_id] if t > now - SPAM_SETTINGS['flood_window']]
     if len(recent) > SPAM_SETTINGS['flood_threshold']:
         temp_bans[chat_id] = now + SPAM_SETTINGS['temp_ban_time']
-        print(f"🚫 FLOOD: Пользователь {chat_id} получил временный бан")
+        print(f"🚫 FLOOD: Пользователь {chat_id} получил бан на 15 минут")
+        try:
+            bot.send_message(chat_id, ban_message)
+        except:
+            pass
         return True
 
     return False
@@ -182,7 +170,7 @@ def start(message):
 
 @bot.message_handler(commands=['update'])
 def broadcast_update(message):
-    if message.from_user.id != 6177817315:
+    if message.from_user.id != ADMIN_ID:
         return
     sent = 0
     for uid in list(users):
@@ -195,7 +183,7 @@ def broadcast_update(message):
 
 @bot.message_handler(commands=['ban'])
 def ban_user(message):
-    if message.from_user.id != 6177817315:
+    if message.from_user.id != ADMIN_ID:
         return
     try:
         user_to_ban = int(message.text.split()[1])
@@ -209,7 +197,7 @@ def ban_user(message):
 
 @bot.message_handler(commands=['unban'])
 def unban_user(message):
-    if message.from_user.id != 6177817315:
+    if message.from_user.id != ADMIN_ID:
         return
     try:
         user_to_unban = int(message.text.split()[1])
@@ -220,6 +208,32 @@ def unban_user(message):
         bot.reply_to(message, f"✅ Пользователь {user_to_unban} полностью разбанен")
     except:
         bot.reply_to(message, "Использование: /unban <chat_id>")
+
+@bot.message_handler(commands=['myid'])
+def my_id(message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    bot.reply_to(message, f"🔑 <b>Твой chat_id:</b> <code>{message.chat.id}</code>")
+
+@bot.message_handler(commands=['banlist'])
+def ban_list(message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    now = time.time()
+    for uid in list(temp_bans.keys()):
+        if temp_bans[uid] <= now:
+            del temp_bans[uid]
+
+    perm = sorted(list(banned_users))
+    temp_list = []
+    for uid, until in sorted(temp_bans.items()):
+        remaining = max(0, int(until - now))
+        temp_list.append(f"{uid} — {remaining} сек")
+
+    text = "📋 <b>Бан-лист</b>\n\n"
+    text += f"🛑 <b>Перманентные баны</b> ({len(perm)}):\n" + ("\n".join(map(str, perm)) if perm else "— пусто\n")
+    text += f"\n\n⏳ <b>Временные баны</b> ({len(temp_list)}):\n" + ("\n".join(temp_list) if temp_list else "— пусто")
+    bot.reply_to(message, text)
 
 @bot.message_handler(func=lambda m: m.text and m.text.lower() in ['привет', 'здравствуй', 'добрый день', 'доброе утро', 'добрый вечер', 'хай', 'hello', 'hi', 'здрасьте'])
 def hello(message):
@@ -277,58 +291,19 @@ def callback_handler(call):
         bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=back_to_services_markup())
 
     # ==================== УГОЩЕНИЯ С АВТОЗАПОЛНЕНИЕМ ====================
-    elif call.data == 'drink_tea':
-        text = "🍵 <b>Чай</b>\n\n• Зелёный: классический / с мелиссой\n• Чёрный: с бергамотом / классический\n• Травяной: гибискус с малиной\n\nЧтобы заказать чай нажмите кнопку ниже 👇"
+    elif call.data in ['drink_tea', 'drink_coffee', 'drink_milk', 'drink_syrup', 'drink_add', 'drink_water', 'drink_mood']:
+        texts = {
+            'drink_tea': ("🍵 <b>Чай</b>\n\n• Зелёный: классический / с мелиссой\n• Чёрный: с бергамотом / классический\n• Травяной: гибискус с малиной", "Здравствуйте! Хочу заказать чай 🍵"),
+            'drink_coffee': ("☕ <b>Кофе</b>\n\n• Эспрессо / Американо / Капучино / Латте", "Здравствуйте! Хочу заказать кофе ☕"),
+            'drink_milk': ("🥛 <b>Молоко на выбор</b>\n\n• миндальное • кокосовое • классическое", "Здравствуйте! Хочу выбрать молоко для напитка 🥛"),
+            'drink_syrup': ("🍯 <b>Сиропы</b>\n\n• ванильный • карамельный • миндальный • кокосовый", "Здравствуйте! Хочу добавить сиропы 🍯"),
+            'drink_add': ("🍋 <b>Дополнения</b>\n\n• корица • лимон", "Здравствуйте! Хочу добавить корицу и/или лимон 🍋"),
+            'drink_water': ("🥤 <b>Вода</b>\n\n• Без газа / с лимоном", "Здравствуйте! Хочу заказать воду 🥤"),
+            'drink_mood': ("🥂 <b>Для настроения</b>\n\n• Игристое сухое / вино белое", "Здравствуйте! Хочу напиток для настроения 🥂")
+        }
+        text, pre = texts[call.data]
         markup = types.InlineKeyboardMarkup()
-        pre_text = quote("Здравствуйте! Хочу заказать чай 🍵")
-        markup.add(types.InlineKeyboardButton('✍️ Написать @Wish_Lab', url=f'https://t.me/Wish_Lab?text={pre_text}'))
-        markup.add(types.InlineKeyboardButton('« Назад в меню↩️', callback_data='back_to_drinks'))
-        bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
-
-    elif call.data == 'drink_coffee':
-        text = "☕ <b>Кофе</b>\n\n• Эспрессо / Американо / Капучино / Латте\n\nЧтобы заказать кофе нажмите кнопку ниже 👇"
-        markup = types.InlineKeyboardMarkup()
-        pre_text = quote("Здравствуйте! Хочу заказать кофе ☕")
-        markup.add(types.InlineKeyboardButton('✍️ Написать @Wish_Lab', url=f'https://t.me/Wish_Lab?text={pre_text}'))
-        markup.add(types.InlineKeyboardButton('« Назад в меню↩️', callback_data='back_to_drinks'))
-        bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
-
-    elif call.data == 'drink_milk':
-        text = "🥛 <b>Молоко на выбор</b>\n\n• миндальное • кокосовое • классическое\n\nЧтобы заказать молоко нажмите кнопку ниже 👇"
-        markup = types.InlineKeyboardMarkup()
-        pre_text = quote("Здравствуйте! Хочу выбрать молоко для напитка 🥛")
-        markup.add(types.InlineKeyboardButton('✍️ Написать @Wish_Lab', url=f'https://t.me/Wish_Lab?text={pre_text}'))
-        markup.add(types.InlineKeyboardButton('« Назад в меню↩️', callback_data='back_to_drinks'))
-        bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
-
-    elif call.data == 'drink_syrup':
-        text = "🍯 <b>Сиропы</b>\n\n• ванильный • карамельный • миндальный • кокосовый\n\nЧтобы заказать сироп нажмите кнопку ниже 👇"
-        markup = types.InlineKeyboardMarkup()
-        pre_text = quote("Здравствуйте! Хочу добавить сиропы 🍯")
-        markup.add(types.InlineKeyboardButton('✍️ Написать @Wish_Lab', url=f'https://t.me/Wish_Lab?text={pre_text}'))
-        markup.add(types.InlineKeyboardButton('« Назад в меню↩️', callback_data='back_to_drinks'))
-        bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
-
-    elif call.data == 'drink_add':
-        text = "🍋 <b>Дополнения</b>\n\n• корица • лимон\n\nЧтобы заказать дополнения нажмите кнопку ниже 👇"
-        markup = types.InlineKeyboardMarkup()
-        pre_text = quote("Здравствуйте! Хочу добавить корицу и/или лимон 🍋")
-        markup.add(types.InlineKeyboardButton('✍️ Написать @Wish_Lab', url=f'https://t.me/Wish_Lab?text={pre_text}'))
-        markup.add(types.InlineKeyboardButton('« Назад в меню↩️', callback_data='back_to_drinks'))
-        bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
-
-    elif call.data == 'drink_water':
-        text = "🥤 <b>Вода</b>\n\n• Без газа / с лимоном\n\nЧтобы заказать воду нажмите кнопку ниже 👇"
-        markup = types.InlineKeyboardMarkup()
-        pre_text = quote("Здравствуйте! Хочу заказать воду 🥤")
-        markup.add(types.InlineKeyboardButton('✍️ Написать @Wish_Lab', url=f'https://t.me/Wish_Lab?text={pre_text}'))
-        markup.add(types.InlineKeyboardButton('« Назад в меню↩️', callback_data='back_to_drinks'))
-        bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
-
-    elif call.data == 'drink_mood':
-        text = "🥂 <b>Для настроения</b>\n\n• Игристое сухое / вино белое\n\nЧтобы заказать напиток для настроения нажмите кнопку ниже 👇"
-        markup = types.InlineKeyboardMarkup()
-        pre_text = quote("Здравствуйте! Хочу напиток для настроения 🥂")
+        pre_text = quote(pre)
         markup.add(types.InlineKeyboardButton('✍️ Написать @Wish_Lab', url=f'https://t.me/Wish_Lab?text={pre_text}'))
         markup.add(types.InlineKeyboardButton('« Назад в меню↩️', callback_data='back_to_drinks'))
         bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
@@ -338,5 +313,5 @@ def callback_handler(call):
 
 # ====================== ЗАПУСК ======================
 if __name__ == '__main__':
-    print("🚀 Бот Бьютилаб запущен с ПРОДВИНУТОЙ защитой от спама и автозаполнением сообщений в угощениях!")
+    print("🚀 Бот Бьютилаб запущен! Временный бан теперь 15 минут + сообщение пользователю")
     bot.infinity_polling()
