@@ -8,14 +8,14 @@ import telebot
 from telebot import types
 
 load_dotenv()
-TOKEN = os.getenv('BOT_TOKEN')
+TOKEN = os.getenv('BOT_TOKEN', '8730533295:AAEfhZnRU_k8ySq1pdnHMhLx7KLhrkjaZ9M')
 if not TOKEN:
     print("❌ Добавь BOT_TOKEN в .env файл!")
     exit()
 
 bot = telebot.TeleBot(TOKEN, parse_mode='HTML')
 
-ADMIN_ID = 6177817315  # ←←← ТВОЙ ID
+ADMIN_ID = 8513563850  # ←←← ТВОЙ ID
 
 # ====================== ХРАНИЛИЩЕ ======================
 USERS_FILE = "users.json"
