@@ -264,7 +264,7 @@ def handle_text(message):
         markup.add(types.InlineKeyboardButton('🚀 Записаться онлайн', url='https://n757778.yclients.com/company/712716/personal/menu?o='))
         bot.send_message(message.chat.id, "💫 Переходи в онлайн-запись — выбери мастера, услугу и удобное время за 30 секунд!", reply_markup=markup)
     elif text == '📞 Контакты':
-        contacts = "📍 <b>Бьютилаб</b>\nул. Щепкина 28, Москва\nм. Проспект Мира\n\n📞 <a href='tel:+79774498581'>+7 (977) 449-85-81</a>\n🕒 Ежедневно 10:00–22:00\n\n📱 <a href='https://t.me/Wish_Lab'> Администратор салона @Wish_Lab</a>\n\nНапиши нам в любой момент — ответим максимально быстро ❤️"
+        contacts = "📍 <b>Бьютилаб</b>\nул. Щепкина 28, Москва\nм. Проспект Мира\n\n📞 <a href='tel:+79774498581'>+7 (977) 449-85-81</a>\n🕒 Ежедневно 10:00–22:00\n\n📱 <a href='https://t.me/@Beautylab_msk_ru'> Администратор салона @Beautylab_msk_ru</a>\n\nНапиши нам в любой момент — ответим максимально быстро ❤️"
         bot.send_message(message.chat.id, contacts, reply_markup=main_keyboard())
     elif text == '❓ Помощь':
         help_text = "❓ <b>Нужна помощь?</b>\n\nЕсли бот глючит, не открывается запись, не приходят сообщения или есть любые вопросы/пожелания — пиши напрямую тех разработчику:\n\n👉 @Scream404\n\nМы ответим максимально быстро ❤️\nТакже можешь позвонить: +7 (933) 205-88-10"
@@ -351,7 +351,7 @@ def callback_handler(call):
         text, pre = texts[call.data]
         markup = types.InlineKeyboardMarkup()
         pre_text = quote(pre)
-        markup.add(types.InlineKeyboardButton('✍️ Написать @Wish_Lab', url=f'https://t.me/Wish_Lab?text={pre_text}'))
+        markup.add(types.InlineKeyboardButton('✍️ Написать @Beautylab_msk_ru', url=f'https://t.me/Beautylab_msk_ru?text={pre_text}'))
         markup.add(types.InlineKeyboardButton('« Назад в меню↩️', callback_data='back_to_drinks'))
         bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
 
