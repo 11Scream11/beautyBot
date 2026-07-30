@@ -114,9 +114,11 @@ def main_keyboard():
     btn4 = types.KeyboardButton('📅 Записаться')
     btn5 = types.KeyboardButton('📞 Контакты')
     btn6 = types.KeyboardButton('❓ Помощь')
+    btn7 = types.KeyboardButton('🎁 Сертификаты')
     markup.add(btn1, btn2)
     markup.add(btn3, btn4)
     markup.add(btn5, btn6)
+    markup.add(btn7)
     return markup
 
 def services_categories():
@@ -136,6 +138,12 @@ def back_to_services_markup():
         types.InlineKeyboardButton('📅 Записаться', url='https://n757778.yclients.com/company/712716/personal/menu?o='),
         types.InlineKeyboardButton('« Назад к категориям', callback_data='back_to_categories')
     )
+    return markup
+
+def certificates_markup():
+    markup = types.InlineKeyboardMarkup(row_width=1)
+    markup.add(types.InlineKeyboardButton('🎁 Купить сертификат на сайте', url='https://beautylabmsk.ru/buy'))
+    markup.row(types.InlineKeyboardButton('« Назад в меню', callback_data='back_to_main'))
     return markup
 
 def drinks_menu_markup():
@@ -270,6 +278,22 @@ def handle_text(message):
     elif text == '❓ Помощь':
         help_text = "❓ <b>Нужна помощь?</b>\n\nЕсли бот глючит, не открывается запись, не приходят сообщения или есть любые вопросы/пожелания — пиши напрямую тех разработчику:\n\n👉 @texagentru\n\nМы ответим максимально быстро ❤️\nТакже можешь позвонить: +7 (933) 205-88-10"
         bot.send_message(message.chat.id, help_text, reply_markup=main_keyboard())
+    elif text == '🎁 Сертификаты':
+        cert_text = (
+            "🎁 <b>Подарочные сертификаты Бьютилаб</b>\n\n"
+            "Подари близкому человеку маникюр, брови, волосы или SPA-педикюр в самом сердце Москвы.\n\n"
+            "<b>Доступные номиналы:</b>\n"
+            "• 2 000 ₽\n"
+            "• 3 000 ₽\n"
+            "• 4 000 ₽\n"
+            "• 5 000 ₽ 🔥 <i>хит</i>\n"
+            "• 10 000 ₽\n\n"
+            "✨ Можно использовать на любую услугу студии\n"
+            "🎨 Красивое оформление в подарок\n"
+            "📅 Срок действия — 12 месяцев\n\n"
+            "Выберите номинал и оформите на сайте 👇"
+        )
+        bot.send_message(message.chat.id, cert_text, reply_markup=certificates_markup())
 
 # ====================== CALLBACK ======================
 @bot.callback_query_handler(func=lambda call: True)
