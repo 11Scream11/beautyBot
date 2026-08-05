@@ -172,7 +172,7 @@ def start(message):
         "📍 Москва, ул. Щепкина 28, м. Проспект Мира\n"
         "📞 <a href='tel:+79774498581'>+7 (977) 449-85-81</a>\n"
         "🕒 Ежедневно 10:00–22:00\n\n"
-        "🎁 <b>Скидка 20% на первый визит</b> — на любую услугу студии!\n\n"
+        "🎁 <b>Скидка 15% на первый визит</b> — на любую услугу студии!\n\n"
         "💅 Запишитесь на услугу за 30 секунд — без очередей и лотереи с мастером ✨"
     )
     bot.send_message(message.chat.id, welcome, reply_markup=main_keyboard())
@@ -271,12 +271,12 @@ def handle_text(message):
     elif text == '📅 Записаться':
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton('🚀 Записаться онлайн', url='https://n757778.yclients.com/company/712716/personal/menu?o='))
-        bot.send_message(message.chat.id, "💫 Переходи в онлайн-запись — выбери мастера, услугу и удобное время за 30 секунд!\n\n🎁 Скидка 20% на первый визит.", reply_markup=markup)
+        bot.send_message(message.chat.id, "💫 Переходи в онлайн-запись — выбери мастера, услугу и удобное время за 30 секунд!\n\n🎁 Скидка 15% на первый визит.", reply_markup=markup)
     elif text == '📞 Контакты':
         contacts = "📍 <b>Бьютилаб</b>\nул. Щепкина 28, Москва\nм. Проспект Мира\n\n📞 <a href='tel:+79774498581'>+7 (977) 449-85-81</a>\n🕒 Ежедневно 10:00–22:00\n\n📱 <a href='https://t.me/@Beautylab_msk_ru'> Администратор салона @Beautylab_msk_ru</a>\n\nНапиши нам в любой момент — ответим максимально быстро ❤️"
         bot.send_message(message.chat.id, contacts, reply_markup=main_keyboard())
     elif text == '❓ Помощь':
-        help_text = "❓ <b>Нужна помощь?</b>\n\nЕсли бот глючит, не открывается запись, не приходят сообщения или есть любые вопросы/пожелания — пиши напрямую тех разработчику:\n\n👉 @texagentru\n\nМы ответим максимально быстро ❤️\nТакже можешь позвонить: +7 (933) 205-88-10"
+        help_text = "❓ <b>Нужна помощь?</b>\n\nЕсли бот глючит, не открывается запись, не приходят сообщения или есть любые вопросы/пожелания — пиши напрямую тех разработчику:\n\n👉 @Scream404\n\nМы ответим максимально быстро ❤️\nТакже можешь позвонить: +7 (933) 205-88-10"
         bot.send_message(message.chat.id, help_text, reply_markup=main_keyboard())
     elif text == '🎁 Сертификаты':
         cert_text = (
