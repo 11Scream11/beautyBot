@@ -154,8 +154,7 @@ def drinks_menu_markup():
         types.InlineKeyboardButton('🥛 Молоко на выбор', callback_data='drink_milk'),
         types.InlineKeyboardButton('🍯 Сиропы', callback_data='drink_syrup'),
         types.InlineKeyboardButton('🍋 Дополнения', callback_data='drink_add'),
-        types.InlineKeyboardButton('🥤 Вода', callback_data='drink_water'),
-        types.InlineKeyboardButton('🥂 Для настроения', callback_data='drink_mood')
+        types.InlineKeyboardButton('🥤 Вода', callback_data='drink_water')
     )
     markup.add(types.InlineKeyboardButton('« Назад в меню', callback_data='back_to_main'))
     return markup
@@ -273,10 +272,10 @@ def handle_text(message):
         markup.add(types.InlineKeyboardButton('🚀 Записаться онлайн', url='https://n757778.yclients.com/company/712716/personal/menu?o='))
         bot.send_message(message.chat.id, "💫 Переходи в онлайн-запись — выбери мастера, услугу и удобное время за 30 секунд!\n\n🎁 Скидка 20% на первый визит.", reply_markup=markup)
     elif text == '📞 Контакты':
-        contacts = "📍 <b>Бьютилаб</b>\nул. Щепкина 28, Москва\nм. Проспект Мира\n\n📞 <a href='tel:+79774498581'>+7 (977) 449-85-81</a>\n🕒 Ежедневно 10:00–22:00\n\n📱 <a href='https://t.me/@Beautylab_msk_ru'> Администратор салона @Beautylab_msk_ru</a>\n\nНапиши нам в любой момент — ответим максимально быстро ❤️"
+        contacts = "📍 <b>Бьютилаб</b>\nул. Щепкина 28, Москва\nм. Проспект Мира\n\n📞 <a href='tel:+79774498581'>+7 (977) 449-85-81</a>\n🕒 Ежедневно 10:00–22:00\n\n📱 <a href='https://t.me/@Wish_lab'> Администратор салона @Wish_lab</a>\n\nНапиши нам в любой момент — ответим максимально быстро ❤️"
         bot.send_message(message.chat.id, contacts, reply_markup=main_keyboard())
     elif text == '❓ Помощь':
-        help_text = "❓ <b>Нужна помощь?</b>\n\nЕсли бот глючит, не открывается запись, не приходят сообщения или есть любые вопросы/пожелания — пиши напрямую тех разработчику:\n\n👉 @Scream404\n\nМы ответим максимально быстро ❤️\nТакже можешь позвонить: +7 (933) 205-88-10"
+        help_text = "❓ <b>Нужна помощь?</b>\n\nЕсли бот глючит, не открывается запись, не приходят сообщения или есть любые вопросы/пожелания — пиши напрямую тех разработчику:\n\n👉 @texagentru\n\nМы ответим максимально быстро ❤️\nТакже можешь позвонить: +7 (933) 205-88-10"
         bot.send_message(message.chat.id, help_text, reply_markup=main_keyboard())
     elif text == '🎁 Сертификаты':
         cert_text = (
@@ -369,20 +368,19 @@ def callback_handler(call):
         bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=back_to_services_markup())
 
     # ==================== УГОЩЕНИЯ С АВТОЗАПОЛНЕНИЕМ ====================
-    elif call.data in ['drink_tea', 'drink_coffee', 'drink_milk', 'drink_syrup', 'drink_add', 'drink_water', 'drink_mood']:
+    elif call.data in ['drink_tea', 'drink_coffee', 'drink_milk', 'drink_syrup', 'drink_add', 'drink_water']:
         texts = {
-            'drink_tea': ("🍵 <b>Чай</b>\n\n• Зелёный: классический / с мелиссой\n• Чёрный: с бергамотом / классический\n• Травяной: гибискус с малиной", "Здравствуйте! Хочу заказать чай 🍵"),
-            'drink_coffee': ("☕ <b>Кофе</b>\n\n• Эспрессо / Американо / Капучино / Латте", "Здравствуйте! Хочу заказать кофе ☕"),
+            'drink_tea': ("🍵 <b>Чай</b>\n\n• Зелёный\n• Чёрный\n• Травяной", "Здравствуйте! Хочу заказать чай 🍵"),
+            'drink_coffee': ("☕ <b>Кофе</b>\n\n• Эспрессо\n• Американо\n• Капучино\n• Латте\n• Матче латте\n• Какао\n• Горячий шоколад", "Здравствуйте! Хочу заказать кофе ☕"),
             'drink_milk': ("🥛 <b>Молоко на выбор</b>\n\n• миндальное • кокосовое • классическое", "Здравствуйте! Хочу выбрать молоко для напитка 🥛"),
             'drink_syrup': ("🍯 <b>Сиропы</b>\n\n• ванильный • карамельный • миндальный • кокосовый", "Здравствуйте! Хочу добавить сиропы 🍯"),
             'drink_add': ("🍋 <b>Дополнения</b>\n\n• корица • лимон", "Здравствуйте! Хочу добавить корицу и/или лимон 🍋"),
-            'drink_water': ("🥤 <b>Вода</b>\n\n• Без газа / с лимоном", "Здравствуйте! Хочу заказать воду 🥤"),
-            'drink_mood': ("🥂 <b>Для настроения</b>\n\n• Игристое сухое / вино белое", "Здравствуйте! Хочу напиток для настроения 🥂")
+            'drink_water': ("🥤 <b>Вода</b>\n\n• Без газа / с лимоном", "Здравствуйте! Хочу заказать воду 🥤")
         }
         text, pre = texts[call.data]
         markup = types.InlineKeyboardMarkup()
         pre_text = quote(pre)
-        markup.add(types.InlineKeyboardButton('✍️ Написать @Beautylab_msk_ru', url=f'https://t.me/Beautylab_msk_ru?text={pre_text}'))
+        markup.add(types.InlineKeyboardButton('✍️ Написать @Wish_lab', url=f'https://t.me/Wish_lab?text={pre_text}'))
         markup.add(types.InlineKeyboardButton('« Назад в меню↩️', callback_data='back_to_drinks'))
         bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
 
